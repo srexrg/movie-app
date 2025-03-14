@@ -1,11 +1,27 @@
-import { Link } from "expo-router";
-import { Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MovieSection from "../components/MovieSection";
+import { mockTopMovies } from "../services/tmdb/mockData";
 
 export default function Index() {
   return (
-    <View className="flex-1 justify-center items-center bg-slate-400">
-      <Text>Hey</Text>
-      <Link href="../onboarding">Onboarding</Link>
-    </View>
+    <SafeAreaView className="flex-1 bg-primary">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="py-4">
+          <MovieSection 
+            title="Top Rated Movies" 
+            movies={mockTopMovies.results} 
+          />
+          <MovieSection 
+            title="Popular Movies" 
+            movies={mockTopMovies.results} 
+          />
+          <MovieSection 
+            title="Upcoming Movies" 
+            movies={mockTopMovies.results} 
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
