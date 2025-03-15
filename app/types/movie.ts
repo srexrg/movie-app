@@ -23,6 +23,24 @@ export interface TrendingMovie {
   poster_url: string;
 }
 
+export interface MovieVideo {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  size: number;
+  type: string;
+  official: boolean;
+}
+
+export interface MovieCredit {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
 export interface MovieDetails {
   adult: boolean;
   backdrop_path: string | null;
@@ -69,6 +87,13 @@ export interface MovieDetails {
   video: boolean;
   vote_average: number;
   vote_count: number;
+  videos?: {
+    results: MovieVideo[];
+  };
+  credits?: {
+    cast: MovieCredit[];
+    crew: MovieCredit[];
+  };
 }
 
 export interface TrendingCardProps {
@@ -83,5 +108,4 @@ export interface MovieResponse {
   total_results: number;
 }
 
-// Since we can't export interface as values, we'll export an empty object as default
 export default {};

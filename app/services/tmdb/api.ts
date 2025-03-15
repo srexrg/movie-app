@@ -1,9 +1,10 @@
-import { Movie, MovieDetails, MovieResponse, TrendingMovie } from "@/app/types/movie";
+import { Movie, MovieDetails, MovieResponse, TrendingMovie, MovieCredit } from "@/app/types/movie";
 import { mockTopMovies } from "./mockData";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 const POSTER_SIZE = "w500";
 const BACKDROP_SIZE = "original";
+const PROFILE_SIZE = "w185";
 
 export const TMDB_CONFIG = {
   BASE_URL: "https://api.themoviedb.org/3",
@@ -85,6 +86,14 @@ export const fetchMovieDetails = async (
         BACKDROP_SIZE
       );
     }
+
+    // Format cast profile images
+    if (data.credits?.cast) {
+      data.credits.cast = data.credits.cast.map((castMember: MovieCredit) => ({
+        ...castMember,
+        profile_path: formatImageUrl(castMember.profile_path, PROFILE_SIZE)
+      }));
+    }
     
     return data;
   } catch (error) {
@@ -154,8 +163,7 @@ const tmdbApi = {
       return data;
     } catch (error) {
       console.error("Error fetching top rated movies:", error);
-      // Fallback to mock data in case of errors
-      return mockTopMovies;
+      throw error;
     }
   },
   
@@ -185,8 +193,7 @@ const tmdbApi = {
       return data;
     } catch (error) {
       console.error("Error fetching popular movies:", error);
-      // Fallback to mock data in case of errors
-      return mockTopMovies;
+      throw error;
     }
   },
   
@@ -216,8 +223,7 @@ const tmdbApi = {
       return data;
     } catch (error) {
       console.error("Error fetching upcoming movies:", error);
-      // Fallback to mock data in case of errors
-      return mockTopMovies;
+      throw error;
     }
   },
   
@@ -244,8 +250,7 @@ const tmdbApi = {
       };
     } catch (error) {
       console.error(`Error fetching movie by ID ${id}:`, error);
-      // Fallback to mock data in case of errors
-      return mockTopMovies.results.find(movie => movie.id === id);
+      throw error;
     }
   },
   

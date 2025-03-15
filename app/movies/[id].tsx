@@ -1,14 +1,14 @@
-import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions, Platform, FlatList } from 'react-native';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { Movie, MovieDetails } from '@/app/types/movie';
+import { WebView } from 'react-native-webview';
+import { Movie, MovieDetails, MovieVideo, MovieCredit } from '@/app/types/movie';
 import { storageService } from '@/app/services/storage';
 import { fetchMovieDetails, tmdbApi } from '@/app/services/tmdb/api';
-import { GENRES } from '@/app/services/tmdb/mockData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_WIDTH * 1.2;
@@ -19,6 +19,8 @@ export default function MovieDetailScreen() {
   const [movieDetails, setMovieDetails] = useState<MovieDetails | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [selectedTrailer, setSelectedTrailer] = useState<MovieVideo | null>(null);
 
   useEffect(() => {
     loadMovie();
@@ -28,14 +30,20 @@ export default function MovieDetailScreen() {
   const loadMovie = async () => {
     setIsLoading(true);
     try {
-      // Fetch detailed movie information
       const details = await fetchMovieDetails(Number(id));
       setMovieDetails(details);
       
-      // Convert the details to the Movie format for compatibility with other components
       const movieData = await tmdbApi.getMovieById(Number(id));
       if (movieData) {
         setMovie(movieData);
+      }
+
+      // Find the official trailer
+      if (details.videos?.results) {
+        const trailer = details.videos.results.find(
+          video => video.type === "Trailer" && video.site === "YouTube" && video.official
+        ) || details.videos.results[0];
+        setSelectedTrailer(trailer);
       }
     } catch (error) {
       console.error('Error loading movie:', error);
@@ -68,6 +76,38 @@ export default function MovieDetailScreen() {
     }
   };
 
+  const renderCastMember = ({ item }: { item: MovieCredit }) => (
+    <View className="mr-4 items-center w-24">
+      <View className="w-24 h-24 rounded-full overflow-hidden mb-2">
+        {item.profile_path ? (
+          <Image
+            source={{ uri: item.profile_path }}
+            className="w-full h-full"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-full h-full bg-secondary items-center justify-center">
+            <FontAwesome5 name="user" size={24} color="#9CA4AB" />
+          </View>
+        )}
+      </View>
+      <Text 
+        className="text-white text-sm text-center" 
+        numberOfLines={2}
+        style={{ fontFamily: 'Poppins_600SemiBold' }}
+      >
+        {item.name}
+      </Text>
+      <Text 
+        className="text-light-200 text-xs text-center" 
+        numberOfLines={1}
+        style={{ fontFamily: 'Poppins_400Regular' }}
+      >
+        {item.character}
+      </Text>
+    </View>
+  );
+
   if (isLoading || !movie || !movieDetails) {
     return (
       <SafeAreaView className="flex-1 bg-primary">
@@ -86,150 +126,201 @@ export default function MovieDetailScreen() {
 
   return (
     <View className="flex-1 bg-primary">
-      <ScrollView className="flex-1" bounces={false} showsVerticalScrollIndicator={false}>
-        {/* Backdrop Image */}
-        <View className="w-full" style={{ height: POSTER_HEIGHT }}>
-          <Image
-            source={{ uri: movieDetails.backdrop_path || movie.backdrop_path }}
-            className="absolute w-full h-full"
-            resizeMode="cover"
-          />
-          <View className="absolute inset-0 bg-gradient-to-b from-transparent to-primary" />
-        </View>
-
-        {/* Header Buttons with BlurView */}
-        <View className="absolute top-0 w-full z-10">
+      {showTrailer && selectedTrailer ? (
+        <View className="flex-1">
           <SafeAreaView>
-            <View className="w-full flex-row justify-between items-center px-4 py-2">
-              <TouchableOpacity
-                onPress={() => router.back()}
-                className="rounded-full overflow-hidden"
-              >
-                <BlurView intensity={80} tint="dark" className="p-3">
-                  <FontAwesome5 name="arrow-left" size={20} color="white" />
-                </BlurView>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleToggleSave}
-                className="rounded-full overflow-hidden"
-              >
-                <BlurView intensity={80} tint="dark" className="p-3">
-                  <FontAwesome5 
-                    name="bookmark"
-                    size={20} 
-                    color="white"
-                    solid={isSaved}
-                  />
-                </BlurView>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </View>
-
-        {/* Content Section */}
-        <View className="px-4 -mt-40">
-          <Animated.View 
-            entering={FadeInDown.duration(600).springify()}
-            className="bg-secondary/90 backdrop-blur-xl rounded-3xl p-6 mb-6"
-          >
-            {/* Title and Rating */}
-            <Text 
-              className="text-white text-3xl mb-3" 
-              style={{ fontFamily: 'Poppins_700Bold' }}
+            <TouchableOpacity
+              onPress={() => setShowTrailer(false)}
+              className="p-4"
             >
-              {movieDetails.title}
-            </Text>
-            
-            <View className="flex-row items-center space-x-4 mb-6">
-              <View className="bg-accent/90 px-4 py-2 rounded-xl flex-row items-center space-x-2">
-                <FontAwesome5 name="star" size={16} color="#FFD700" solid />
-                <Text 
-                  className="text-white text-lg font-bold ml-2"
-                  style={{ fontFamily: 'Poppins_600SemiBold' }}
+              <FontAwesome5 name="times" size={24} color="white" />
+            </TouchableOpacity>
+          </SafeAreaView>
+          <WebView
+            source={{ uri: `https://www.youtube.com/embed/${selectedTrailer.key}` }}
+            style={{ flex: 1 }}
+          />
+        </View>
+      ) : (
+        <ScrollView className="flex-1" bounces={false} showsVerticalScrollIndicator={false}>
+          {/* Backdrop Image */}
+          <View className="w-full" style={{ height: POSTER_HEIGHT }}>
+            <Image
+              source={{ uri: movieDetails.backdrop_path || movie.backdrop_path }}
+              className="absolute w-full h-full"
+              resizeMode="cover"
+            />
+            <View className="absolute inset-0 bg-gradient-to-b from-transparent to-primary" />
+          </View>
+
+          {/* Header Buttons with BlurView */}
+          <View className="absolute top-0 w-full z-10">
+            <SafeAreaView>
+              <View className="w-full flex-row justify-between items-center px-4 py-2">
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  className="rounded-full overflow-hidden"
                 >
-                  {movieDetails.vote_average.toFixed(1)}
-                </Text>
+                  <BlurView intensity={80} tint="dark" className="p-3">
+                    <FontAwesome5 name="arrow-left" size={20} color="white" />
+                  </BlurView>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleToggleSave}
+                  className="rounded-full overflow-hidden"
+                >
+                  <BlurView intensity={80} tint="dark" className="p-3">
+                    <FontAwesome5 
+                      name="bookmark"
+                      size={20} 
+                      color="white"
+                      solid={isSaved}
+                    />
+                  </BlurView>
+                </TouchableOpacity>
               </View>
+            </SafeAreaView>
+          </View>
+
+          {/* Content Section */}
+          <View className="px-4 -mt-40">
+            <Animated.View 
+              entering={FadeInDown.duration(600).springify()}
+              className="bg-secondary/90 backdrop-blur-xl rounded-3xl p-6 mb-6"
+            >
+              {/* Title and Rating */}
               <Text 
-                className="text-light-300 text-base ml-4"
-                style={{ fontFamily: 'Poppins_600SemiBold' }}
-              >
-                {new Date(movieDetails.release_date).getFullYear()}
-                {movieDetails.runtime ? ` • ${Math.floor(movieDetails.runtime / 60)}h ${movieDetails.runtime % 60}m` : ''}
-              </Text>
-            </View>
-
-            {/* Genres */}
-            <View className="flex-row flex-wrap gap-2 mb-6">
-              {movieDetails.genres.map(genre => (
-                <Animated.View 
-                  entering={FadeIn.delay(300)}
-                  key={genre.id} 
-                  className="bg-dark-100/50 backdrop-blur-sm px-4 py-2 rounded-xl"
-                >
-                  <Text 
-                    className="text-light-100 text-sm"
-                    style={{ fontFamily: 'Poppins_600SemiBold' }}
-                  >
-                    {genre.name}
-                  </Text>
-                </Animated.View>
-              ))}
-            </View>
-
-            {/* Tagline if available */}
-            {movieDetails.tagline && (
-              <View className="mb-4">
-                <Text 
-                  className="text-accent italic text-base"
-                  style={{ fontFamily: 'Poppins_600SemiBold' }}
-                >
-                  "{movieDetails.tagline}"
-                </Text>
-              </View>
-            )}
-
-            {/* Overview */}
-            <View>
-              <Text 
-                className="text-white text-xl mb-3"
+                className="text-white text-3xl mb-3" 
                 style={{ fontFamily: 'Poppins_700Bold' }}
               >
-                Overview
+                {movieDetails.title}
               </Text>
-              <Text 
-                className="text-light-200 text-base leading-6"
-                style={{ fontFamily: 'Poppins_400Regular' }}
-              >
-                {movieDetails.overview || 'No overview available.'}
-              </Text>
-            </View>
+              
+              <View className="flex-row items-center space-x-4 mb-6">
+                <View className="bg-accent/90 px-4 py-2 rounded-xl flex-row items-center space-x-2">
+                  <FontAwesome5 name="star" size={16} color="#FFD700" solid />
+                  <Text 
+                    className="text-white text-lg font-bold ml-2"
+                    style={{ fontFamily: 'Poppins_600SemiBold' }}
+                  >
+                    {movieDetails.vote_average.toFixed(1)}
+                  </Text>
+                </View>
+                <Text 
+                  className="text-light-300 text-base ml-4"
+                  style={{ fontFamily: 'Poppins_600SemiBold' }}
+                >
+                  {new Date(movieDetails.release_date).getFullYear()}
+                  {movieDetails.runtime ? ` • ${Math.floor(movieDetails.runtime / 60)}h ${movieDetails.runtime % 60}m` : ''}
+                </Text>
+              </View>
 
-            {/* Production Companies */}
-            {movieDetails.production_companies && movieDetails.production_companies.length > 0 && (
-              <View className="mt-6">
+              {/* Trailer Button */}
+              {selectedTrailer && (
+                <TouchableOpacity
+                  onPress={() => setShowTrailer(true)}
+                  className="bg-accent mb-6 p-4 rounded-xl flex-row items-center justify-center"
+                >
+                  <FontAwesome5 name="play" size={16} color="white" solid />
+                  <Text 
+                    className="text-white text-lg ml-2"
+                    style={{ fontFamily: 'Poppins_600SemiBold' }}
+                  >
+                    Watch Trailer
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Genres */}
+              <View className="flex-row flex-wrap gap-2 mb-6">
+                {movieDetails.genres.map(genre => (
+                  <Animated.View 
+                    entering={FadeIn.delay(300)}
+                    key={genre.id} 
+                    className="bg-dark-100/50 backdrop-blur-sm px-4 py-2 rounded-xl"
+                  >
+                    <Text 
+                      className="text-light-100 text-sm"
+                      style={{ fontFamily: 'Poppins_600SemiBold' }}
+                    >
+                      {genre.name}
+                    </Text>
+                  </Animated.View>
+                ))}
+              </View>
+
+              {/* Tagline if available */}
+              {movieDetails.tagline && (
+                <View className="mb-4">
+                  <Text 
+                    className="text-accent italic text-base"
+                    style={{ fontFamily: 'Poppins_600SemiBold' }}
+                  >
+                    "{movieDetails.tagline}"
+                  </Text>
+                </View>
+              )}
+
+              {/* Overview */}
+              <View className="mb-6">
                 <Text 
                   className="text-white text-xl mb-3"
                   style={{ fontFamily: 'Poppins_700Bold' }}
                 >
-                  Production
+                  Overview
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {movieDetails.production_companies.map(company => (
-                    <Text 
-                      key={company.id} 
-                      className="text-light-200 text-base"
-                      style={{ fontFamily: 'Poppins_400Regular' }}
-                    >
-                      {company.name}{', '}
-                    </Text>
-                  ))}
-                </View>
+                <Text 
+                  className="text-light-200 text-base leading-6"
+                  style={{ fontFamily: 'Poppins_400Regular' }}
+                >
+                  {movieDetails.overview || 'No overview available.'}
+                </Text>
               </View>
-            )}
-          </Animated.View>
-        </View>
-      </ScrollView>
+
+              {/* Cast */}
+              {movieDetails.credits?.cast && movieDetails.credits.cast.length > 0 && (
+                <View className="mb-6">
+                  <Text 
+                    className="text-white text-xl mb-4"
+                    style={{ fontFamily: 'Poppins_700Bold' }}
+                  >
+                    Cast
+                  </Text>
+                  <FlatList
+                    data={movieDetails.credits.cast.slice(0, 10)}
+                    renderItem={renderCastMember}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                  />
+                </View>
+              )}
+
+              {/* Production Companies */}
+              {movieDetails.production_companies && movieDetails.production_companies.length > 0 && (
+                <View>
+                  <Text 
+                    className="text-white text-xl mb-3"
+                    style={{ fontFamily: 'Poppins_700Bold' }}
+                  >
+                    Production
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {movieDetails.production_companies.map(company => (
+                      <Text 
+                        key={company.id} 
+                        className="text-light-200 text-base"
+                        style={{ fontFamily: 'Poppins_400Regular' }}
+                      >
+                        {company.name}{', '}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </Animated.View>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
