@@ -1,21 +1,31 @@
-import { View, Text, TextInput, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, Dimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Movie } from '@/app/types/movie';
-import { fetchMovies } from '@/app/services/tmdb/api';
+import { fetchMovies, tmdbApi } from '@/app/services/tmdb/api';
 import MovieCard from '@/app/components/MovieCard';
-import  useDebounce  from '@/app/hooks/useDebounce';
+import useDebounce from '@/app/hooks/useDebounce';
 
 const DEBOUNCE_DELAY = 500;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SPACING = 8;
+const NUM_COLUMNS = 3;
+const ITEM_WIDTH = (SCREEN_WIDTH - 32 - (SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Movie[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
+  const [isLoadingPopular, setIsLoadingPopular] = useState(true);
   
   const debouncedQuery = useDebounce(searchQuery, DEBOUNCE_DELAY);
+
+  useEffect(() => {
+    loadPopularMovies();
+  }, []);
 
   useEffect(() => {
     if (debouncedQuery.trim()) {
@@ -25,6 +35,17 @@ export default function SearchScreen() {
       setHasSearched(false);
     }
   }, [debouncedQuery]);
+
+  const loadPopularMovies = async () => {
+    try {
+      const { results } = await tmdbApi.getPopularMovies();
+      setPopularMovies(results);
+    } catch (error) {
+      console.error('Error loading popular movies:', error);
+    } finally {
+      setIsLoadingPopular(false);
+    }
+  };
 
   const handleSearch = async () => {
     setIsLoading(true);
@@ -67,10 +88,13 @@ export default function SearchScreen() {
           <FlatList
             data={results}
             keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+            numColumns={NUM_COLUMNS}
+            columnWrapperStyle={{
+              gap: SPACING,
+              marginBottom: SPACING
+            }}
             renderItem={({ item }) => (
-              <MovieCard movie={item} />
+              <MovieCard movie={item} width={ITEM_WIDTH} />
             )}
           />
         ) : hasSearched ? (
@@ -88,21 +112,31 @@ export default function SearchScreen() {
               Try searching with different keywords
             </Text>
           </View>
-        ) : (
+        ) : isLoadingPopular ? (
           <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#AB8BFF" />
+          </View>
+        ) : (
+          <>
             <Text 
-              className="text-white text-xl text-center mb-2"
+              className="text-white text-xl mb-4"
               style={{ fontFamily: 'Poppins_700Bold' }}
             >
-              Search Movies
+              Popular Movies
             </Text>
-            <Text 
-              className="text-light-200 text-center"
-              style={{ fontFamily: 'Poppins_600SemiBold' }}
-            >
-              Enter keywords to find movies
-            </Text>
-          </View>
+            <FlatList
+              data={popularMovies}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={NUM_COLUMNS}
+              columnWrapperStyle={{
+                gap: SPACING,
+                marginBottom: SPACING
+              }}
+              renderItem={({ item }) => (
+                <MovieCard movie={item} width={ITEM_WIDTH} />
+              )}
+            />
+          </>
         )}
       </View>
     </SafeAreaView>

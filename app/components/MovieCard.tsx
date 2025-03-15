@@ -4,16 +4,19 @@ import { Movie } from '../types/movie';
 
 interface MovieCardProps {
   movie: Movie;
+  width?: number;
 }
 
-export default function MovieCard({ movie }: MovieCardProps) {
+export default function MovieCard({ movie, width = 128 }: MovieCardProps) {
+  const imageHeight = (width / 2) * 3; // maintain 2:3 aspect ratio
+
   return (
     <Link href={`/movies/${movie.id}`} asChild>
-      <TouchableOpacity className="mr-4 w-32">
+      <TouchableOpacity style={{ width }}>
         <View className="relative">
           <Image
             source={{ uri: movie.poster_path }}
-            className="w-32 h-48 rounded-2xl"
+            style={{ width, height: imageHeight, borderRadius: 16 }}
             resizeMode="cover"
           />
           <View className="absolute bottom-1 right-1 bg-accent px-2 py-1 rounded-lg">
