@@ -38,7 +38,6 @@ export default function RootLayout() {
   useEffect(() => {
     async function checkOnboarding() {
       try {
-        AsyncStorage.removeItem(HAS_ONBOARDED);
         const hasOnboarded = await AsyncStorage.getItem(HAS_ONBOARDED);
         console.log('Has onboarded value:', hasOnboarded);
         

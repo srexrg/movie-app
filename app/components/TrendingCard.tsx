@@ -11,7 +11,7 @@ export default function TrendingCard({ movie, index }: TrendingCardProps) {
   
   return (
     <Link href={`/movies/${movie.movie_id}`} asChild>
-      <TouchableOpacity className="mr-4 w-36">
+      <TouchableOpacity className="mr-8 w-36">
         <View className="relative">
           {!imageError ? (
             <Image

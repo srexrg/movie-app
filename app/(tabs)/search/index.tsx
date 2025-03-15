@@ -1,25 +1,37 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
+import { View, Text, TextInput, FlatList, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Movie } from '@/app/types/movie';
 import { fetchMovies } from '@/app/services/tmdb/api';
 import MovieCard from '@/app/components/MovieCard';
+import  useDebounce  from '@/app/hooks/useDebounce';
+
+const DEBOUNCE_DELAY = 500;
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Movie[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  const debouncedQuery = useDebounce(searchQuery, DEBOUNCE_DELAY);
+
+  useEffect(() => {
+    if (debouncedQuery.trim()) {
+      handleSearch();
+    } else {
+      setResults([]);
+      setHasSearched(false);
+    }
+  }, [debouncedQuery]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
     setIsLoading(true);
     setHasSearched(true);
     
     try {
-      const movies = await fetchMovies({ query: searchQuery });
+      const movies = await fetchMovies({ query: debouncedQuery });
       setResults(movies);
     } catch (error) {
       console.error('Search error:', error);
@@ -32,7 +44,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView className="flex-1 bg-primary">
       <View className="flex-1 px-4">
-        <View className="flex-row items-center space-x-2 mb-6">
+        <View className="flex-row items-center mb-6">
           <View className="flex-1 flex-row items-center bg-secondary rounded-full px-4 py-2">
             <FontAwesome5 name="search" size={16} color="#9CA4AB" />
             <TextInput
@@ -42,21 +54,9 @@ export default function SearchScreen() {
               placeholderTextColor="#9CA4AB"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity 
-            className="bg-accent px-4 py-2 rounded-full"
-            onPress={handleSearch}
-          >
-            <Text 
-              className="text-white"
-              style={{ fontFamily: 'Poppins_600SemiBold' }}
-            >
-              Search
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {isLoading ? (
