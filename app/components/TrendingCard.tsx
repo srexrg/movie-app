@@ -1,4 +1,4 @@
-// filepath: c:\Sreerag\tmdb-app\app\components\TrendingCard.tsx
+
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { TrendingCardProps } from '@/app/types/movie';
@@ -63,12 +63,12 @@ export default function TrendingCard({ movie, index }: TrendingCardProps) {
 
 const styles = StyleSheet.create({
   posterImage: {
-    width: 144, // w-36 = 144px
-    height: 216, // Aspect ratio of 3:2 (1.5x the width)
-    borderRadius: 16 // rounded-2xl
+    width: 144,
+    height: 216, 
+    borderRadius: 16 
   },
   fallbackContainer: {
-    backgroundColor: '#1F2937', // bg-secondary
+    backgroundColor: '#1F2937', 
     alignItems: 'center',
     justifyContent: 'center',
   }

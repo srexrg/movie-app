@@ -1,5 +1,4 @@
 import { Movie, MovieDetails, MovieResponse, TrendingMovie, MovieCredit } from "@/app/types/movie";
-import { mockTopMovies } from "./mockData";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 const POSTER_SIZE = "w500";
@@ -15,10 +14,10 @@ export const TMDB_CONFIG = {
   },
 };
 
-// Helper function to format image URLs
+
 const formatImageUrl = (path: string | null, size: string): string => {
   if (!path) return "";
-  // Check if the path already contains the base URL
+
   if (path.startsWith("http")) return path;
   return `${IMAGE_BASE_URL}${size}${path}`;
 };
@@ -66,8 +65,7 @@ export const fetchMovieDetails = async (
     }
 
     const data = await response.json();
-    
-    // Format image URLs
+
     if (data.poster_path) {
       data.poster_path = formatImageUrl(data.poster_path, POSTER_SIZE);
     }
@@ -87,7 +85,7 @@ export const fetchMovieDetails = async (
       );
     }
 
-    // Format cast profile images
+
     if (data.credits?.cast) {
       data.credits.cast = data.credits.cast.map((castMember: MovieCredit) => ({
         ...castMember,
@@ -119,7 +117,7 @@ export const fetchTrendingMovies = async (): Promise<TrendingMovie[]> => {
     const data = await response.json();
     
     return data.results.map((movie: any, index: number) => {
-      // Ensure we have a properly formatted image URL
+
       const posterUrl = formatImageUrl(movie.poster_path, POSTER_SIZE);
       
       return {
@@ -153,7 +151,7 @@ const tmdbApi = {
 
       const data = await response.json();
       
-      // Format image URLs in results
+
       data.results = data.results.map((movie: any) => ({
         ...movie,
         poster_path: formatImageUrl(movie.poster_path, POSTER_SIZE),
@@ -183,7 +181,7 @@ const tmdbApi = {
 
       const data = await response.json();
       
-      // Format image URLs in results
+ 
       data.results = data.results.map((movie: any) => ({
         ...movie,
         poster_path: formatImageUrl(movie.poster_path, POSTER_SIZE),
@@ -213,7 +211,7 @@ const tmdbApi = {
 
       const data = await response.json();
       
-      // Format image URLs in results
+
       data.results = data.results.map((movie: any) => ({
         ...movie,
         poster_path: formatImageUrl(movie.poster_path, POSTER_SIZE),
@@ -231,7 +229,7 @@ const tmdbApi = {
     try {
       const movieDetails = await fetchMovieDetails(id);
       
-      // Convert MovieDetails to Movie format for compatibility
+
       return {
         id: movieDetails.id,
         title: movieDetails.title,

@@ -61,7 +61,7 @@ export default function RootLayout() {
     setShowOnboarding(false);
   };
 
-  // Wait for fonts and onboarding check to complete
+
   if ((!loaded && !error) || showOnboarding === null) {
     return (
       <>
@@ -71,7 +71,7 @@ export default function RootLayout() {
     );
   }
   
-  // Always include StatusBar at the root level
+
   return (
     <>
       <StatusBar style="light" backgroundColor="#030014" translucent={true} />

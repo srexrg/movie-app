@@ -1,4 +1,4 @@
-// filepath: c:\Sreerag\tmdb-app\app\components\TrendingSection.tsx
+
 import { View, Text, ScrollView } from 'react-native';
 import { TrendingMovie } from '../types/movie';
 import TrendingCard from './TrendingCard';

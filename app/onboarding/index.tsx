@@ -109,7 +109,7 @@ export default function Onboarding() {
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Complete onboarding when user reaches the last screen
+
       completeOnboarding();
     }
   };

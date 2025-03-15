@@ -9,7 +9,7 @@ import MovieCard from '@/app/components/MovieCard';
 export default function SavedMovies() {
   const [savedMovies, setSavedMovies] = useState<Movie[]>([]);
 
-  // Load saved movies when the tab comes into focus
+
   useFocusEffect(
     useCallback(() => {
       const loadSavedMovies = async () => {
@@ -21,7 +21,7 @@ export default function SavedMovies() {
     }, [])
   );
 
-  // Define number of columns as a constant
+
   const numColumns = 2;
 
   return (
