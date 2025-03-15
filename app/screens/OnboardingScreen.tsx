@@ -1,6 +1,5 @@
 import { View, Text, Dimensions, TouchableOpacity, Image } from 'react-native';
 import React, { useRef, useState } from 'react';
-import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Animated, {
   useAnimatedScrollHandler,
@@ -12,7 +11,7 @@ import Animated, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HAS_ONBOARDED = 'has_onboarded';
+export const HAS_ONBOARDED = 'has_onboarded';
 
 const ONBOARDING_DATA = [
   {
@@ -80,7 +79,11 @@ const OnboardingItem = ({ item, index, scrollX }: any) => {
   );
 };
 
-export default function Onboarding() {
+interface OnboardingScreenProps {
+  onComplete: () => void;
+}
+
+export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<Animated.FlatList<typeof ONBOARDING_DATA[0]>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -93,9 +96,8 @@ export default function Onboarding() {
 
   const completeOnboarding = async () => {
     try {
-
       await AsyncStorage.setItem(HAS_ONBOARDED, 'true');
-      router.replace('/(tabs)');
+      onComplete();
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
@@ -109,7 +111,6 @@ export default function Onboarding() {
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Complete onboarding when user reaches the last screen
       completeOnboarding();
     }
   };
