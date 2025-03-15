@@ -8,8 +8,10 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HAS_ONBOARDED = 'has_onboarded';
 
 const ONBOARDING_DATA = [
   {
@@ -88,6 +90,16 @@ export default function Onboarding() {
     },
   });
 
+  const completeOnboarding = async () => {
+    try {
+
+      await AsyncStorage.setItem(HAS_ONBOARDED, 'true');
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+    }
+  };
+
   const handleNext = () => {
     if (currentIndex < ONBOARDING_DATA.length - 1) {
       flatListRef.current?.scrollToIndex({
@@ -96,7 +108,8 @@ export default function Onboarding() {
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      router.replace('/(tabs)');
+      // Complete onboarding when user reaches the last screen
+      completeOnboarding();
     }
   };
 

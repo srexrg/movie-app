@@ -5,18 +5,20 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { Movie } from '@/app/types/movie';
+import { Movie, MovieDetails } from '@/app/types/movie';
 import { storageService } from '@/app/services/storage';
-import { tmdbApi } from '@/app/services/tmdb/api';
+import { fetchMovieDetails, tmdbApi } from '@/app/services/tmdb/api';
 import { GENRES } from '@/app/services/tmdb/mockData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_WIDTH * 1.2;
 
-export default function MovieDetails() {
+export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
+  const [movieDetails, setMovieDetails] = useState<MovieDetails | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadMovie();
@@ -24,29 +26,49 @@ export default function MovieDetails() {
   }, [id]);
 
   const loadMovie = async () => {
-    const movieData = await tmdbApi.getMovieById(Number(id));
-    if (movieData) {
-      setMovie(movieData);
+    setIsLoading(true);
+    try {
+      // Fetch detailed movie information
+      const details = await fetchMovieDetails(Number(id));
+      setMovieDetails(details);
+      
+      // Convert the details to the Movie format for compatibility with other components
+      const movieData = await tmdbApi.getMovieById(Number(id));
+      if (movieData) {
+        setMovie(movieData);
+      }
+    } catch (error) {
+      console.error('Error loading movie:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const checkIfSaved = async () => {
-    const savedMovies = await storageService.getSavedMovies();
-    setIsSaved(savedMovies.some(m => m.id === Number(id)));
+    try {
+      const savedMovies = await storageService.getSavedMovies();
+      setIsSaved(savedMovies.some(m => m.id === Number(id)));
+    } catch (error) {
+      console.error('Error checking saved status:', error);
+    }
   };
 
   const handleToggleSave = async () => {
     if (!movie) return;
 
-    if (isSaved) {
-      await storageService.removeMovie(movie.id);
-    } else {
-      await storageService.saveMovie(movie);
+    try {
+      if (isSaved) {
+        await storageService.removeMovie(movie.id);
+      } else {
+        await storageService.saveMovie(movie);
+      }
+      setIsSaved(!isSaved);
+    } catch (error) {
+      console.error('Error toggling save:', error);
     }
-    setIsSaved(!isSaved);
   };
 
-  if (!movie) {
+  if (isLoading || !movie || !movieDetails) {
     return (
       <SafeAreaView className="flex-1 bg-primary">
         <View className="flex-1 items-center justify-center">
@@ -68,7 +90,7 @@ export default function MovieDetails() {
         {/* Backdrop Image */}
         <View className="w-full" style={{ height: POSTER_HEIGHT }}>
           <Image
-            source={{ uri: movie.backdrop_path }}
+            source={{ uri: movieDetails.backdrop_path || movie.backdrop_path }}
             className="absolute w-full h-full"
             resizeMode="cover"
           />
@@ -115,7 +137,7 @@ export default function MovieDetails() {
               className="text-white text-3xl mb-3" 
               style={{ fontFamily: 'Poppins_700Bold' }}
             >
-              {movie.title}
+              {movieDetails.title}
             </Text>
             
             <View className="flex-row items-center space-x-4 mb-6">
@@ -125,34 +147,47 @@ export default function MovieDetails() {
                   className="text-white text-lg font-bold ml-2"
                   style={{ fontFamily: 'Poppins_600SemiBold' }}
                 >
-                  {movie.vote_average.toFixed(1)}
+                  {movieDetails.vote_average.toFixed(1)}
                 </Text>
               </View>
               <Text 
                 className="text-light-300 text-base ml-4"
                 style={{ fontFamily: 'Poppins_600SemiBold' }}
               >
-                {new Date(movie.release_date).getFullYear()}
+                {new Date(movieDetails.release_date).getFullYear()}
+                {movieDetails.runtime ? ` • ${Math.floor(movieDetails.runtime / 60)}h ${movieDetails.runtime % 60}m` : ''}
               </Text>
             </View>
 
             {/* Genres */}
             <View className="flex-row flex-wrap gap-2 mb-6">
-              {movie.genre_ids.map(genreId => (
+              {movieDetails.genres.map(genre => (
                 <Animated.View 
                   entering={FadeIn.delay(300)}
-                  key={genreId} 
+                  key={genre.id} 
                   className="bg-dark-100/50 backdrop-blur-sm px-4 py-2 rounded-xl"
                 >
                   <Text 
                     className="text-light-100 text-sm"
                     style={{ fontFamily: 'Poppins_600SemiBold' }}
                   >
-                    {GENRES[genreId]}
+                    {genre.name}
                   </Text>
                 </Animated.View>
               ))}
             </View>
+
+            {/* Tagline if available */}
+            {movieDetails.tagline && (
+              <View className="mb-4">
+                <Text 
+                  className="text-accent italic text-base"
+                  style={{ fontFamily: 'Poppins_600SemiBold' }}
+                >
+                  "{movieDetails.tagline}"
+                </Text>
+              </View>
+            )}
 
             {/* Overview */}
             <View>
@@ -166,9 +201,32 @@ export default function MovieDetails() {
                 className="text-light-200 text-base leading-6"
                 style={{ fontFamily: 'Poppins_400Regular' }}
               >
-                {movie.overview}
+                {movieDetails.overview || 'No overview available.'}
               </Text>
             </View>
+
+            {/* Production Companies */}
+            {movieDetails.production_companies && movieDetails.production_companies.length > 0 && (
+              <View className="mt-6">
+                <Text 
+                  className="text-white text-xl mb-3"
+                  style={{ fontFamily: 'Poppins_700Bold' }}
+                >
+                  Production
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {movieDetails.production_companies.map(company => (
+                    <Text 
+                      key={company.id} 
+                      className="text-light-200 text-base"
+                      style={{ fontFamily: 'Poppins_400Regular' }}
+                    >
+                      {company.name}{', '}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            )}
           </Animated.View>
         </View>
       </ScrollView>

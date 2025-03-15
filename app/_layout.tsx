@@ -14,12 +14,15 @@ import {
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
-import {useEffect} from 'react';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import "./globals.css";
 
 SplashScreen.preventAutoHideAsync();
+const HAS_ONBOARDED = 'has_onboarded';
 
 export default function RootLayout() {
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -31,23 +34,47 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    async function checkOnboarding() {
+      try {
+        const hasOnboarded = await AsyncStorage.getItem(HAS_ONBOARDED);
+        console.log('Has onboarded value:', hasOnboarded);
+        
+        if (hasOnboarded) {
+          setInitialRoute('(tabs)');
+        }else{
+          setInitialRoute('onboarding');
+        }
+
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setInitialRoute('onboarding');
+      }
+    }
+    
+    checkOnboarding();
+  }, []);
+
+  useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
 
-  if (!loaded && !error) {
+  if ((!loaded && !error) || initialRoute === null) {
     return null;
   }
-
+  
   return (
     <View className="flex-1 bg-primary">
       <StatusBar style="light" backgroundColor="#030014" />
-      <Stack screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: 'transparent' },
-        animation: 'slide_from_right'
-      }}>
+      <Stack 
+        initialRouteName={initialRoute}
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+          animation: 'slide_from_right'
+        }}
+      >
         <Stack.Screen 
           name="onboarding" 
           options={{ animation: 'none' }}

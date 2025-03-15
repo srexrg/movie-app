@@ -3,25 +3,27 @@ import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Movie } from '@/app/types/movie';
-import { tmdbApi } from '@/app/services/tmdb/api';
+import { fetchMovies } from '@/app/services/tmdb/api';
 import MovieCard from '@/app/components/MovieCard';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Movie[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     
     setIsLoading(true);
+    setHasSearched(true);
+    
     try {
-      const data = await tmdbApi.getTopRatedMovies();
-      setResults(data.results.filter(movie => 
-        movie.title.trim().toLowerCase().startsWith(searchQuery.trim().toLowerCase())
-      ));
+      const movies = await fetchMovies({ query: searchQuery });
+      setResults(movies);
     } catch (error) {
       console.error('Search error:', error);
+      setResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +73,7 @@ export default function SearchScreen() {
               <MovieCard movie={item} />
             )}
           />
-        ) : searchQuery ? (
+        ) : hasSearched ? (
           <View className="flex-1 items-center justify-center">
             <Text 
               className="text-white text-xl text-center mb-2"
