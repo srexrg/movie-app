@@ -1,36 +1,23 @@
-
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { TrendingCardProps } from '@/app/types/movie';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useState } from 'react';
+
+const DEFAULT_MOVIE_POSTER = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-38-picture-grey-c2ebdbb057f2a7614185931650f8cee23fa137b93812ccb132b9df511df1cfac.svg";
 
 export default function TrendingCard({ movie, index }: TrendingCardProps) {
-  const [imageError, setImageError] = useState(false);
-  
+  const hasValidPosterUrl = movie.poster_url && movie.poster_url.length > 0;
   
   return (
     <Link href={`/movies/${movie.movie_id}`} asChild>
       <TouchableOpacity className="mr-8 w-36">
         <View className="relative">
-          {!imageError ? (
-            <Image
-              source={{ uri: movie.poster_url }}
-              style={styles.posterImage}
-              resizeMode="cover"
-              onError={(e) => {
-                console.error(`Failed to load image for ${movie.title}: ${e.nativeEvent.error}`);
-                setImageError(true);
-              }}
-            />
-          ) : (
-            <View style={[styles.posterImage, styles.fallbackContainer]}>
-              <FontAwesome5 name="image" size={24} color="#9CA4AB" />
-              <Text className="text-light-200 text-xs text-center mt-2 px-2">
-                Image not available
-              </Text>
-            </View>
-          )}
+          <Image
+            source={{ uri: hasValidPosterUrl ? movie.poster_url : DEFAULT_MOVIE_POSTER }}
+            style={styles.posterImage}
+            resizeMode={hasValidPosterUrl ? "cover" : "contain"}
+            className={!hasValidPosterUrl ? "bg-secondary p-4" : ""}
+          />
           <View 
             className="absolute top-2 left-2 bg-accent/80 px-2 py-1 rounded-lg"
             style={{ opacity: index === 0 ? 1 : 0.8 }}
@@ -66,10 +53,5 @@ const styles = StyleSheet.create({
     width: 144,
     height: 216, 
     borderRadius: 16 
-  },
-  fallbackContainer: {
-    backgroundColor: '#1F2937', 
-    alignItems: 'center',
-    justifyContent: 'center',
   }
 });

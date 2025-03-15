@@ -108,4 +108,26 @@ export interface MovieResponse {
   total_results: number;
 }
 
+export interface PersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  popularity: number;
+  combined_credits: {
+    cast: {
+      id: number;
+      title: string;
+      poster_path: string | null;
+      release_date: string;
+      character: string;
+      vote_average: number;
+    }[];
+  };
+}
+
 export default {};

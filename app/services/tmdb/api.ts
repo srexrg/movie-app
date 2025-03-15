@@ -1,4 +1,4 @@
-import { Movie, MovieDetails, MovieResponse, TrendingMovie, MovieCredit } from "@/app/types/movie";
+import { Movie, MovieDetails, MovieResponse, TrendingMovie, MovieCredit,PersonDetails } from "@/app/types/movie";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 const POSTER_SIZE = "w500";
@@ -61,11 +61,19 @@ export const fetchMovieDetails = async (
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch movie details: ${response.statusText}`);
+      if (response.status === 404) {
+        throw new Error(`Movie not found (ID: ${movieId})`);
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.status_message || `Failed to fetch movie details: ${response.statusText}`);
     }
 
     const data = await response.json();
+    if (!data) {
+      throw new Error(`No data received for movie ID: ${movieId}`);
+    }
 
+    // Format image paths
     if (data.poster_path) {
       data.poster_path = formatImageUrl(data.poster_path, POSTER_SIZE);
     }
@@ -130,6 +138,41 @@ export const fetchTrendingMovies = async (): Promise<TrendingMovie[]> => {
     });
   } catch (error) {
     console.error("Error fetching trending movies:", error);
+    throw error;
+  }
+};
+
+export const fetchPersonDetails = async (personId: number): Promise<PersonDetails> => {
+  try {
+    const response = await fetch(
+      `${TMDB_CONFIG.BASE_URL}/person/${personId}?append_to_response=combined_credits`,
+      {
+        method: "GET",
+        headers: TMDB_CONFIG.headers,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch person details: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Format image URLs
+    if (data.profile_path) {
+      data.profile_path = formatImageUrl(data.profile_path, PROFILE_SIZE);
+    }
+
+    if (data.combined_credits?.cast) {
+      data.combined_credits.cast = data.combined_credits.cast.map((movie: any) => ({
+        ...movie,
+        poster_path: formatImageUrl(movie.poster_path, POSTER_SIZE),
+      }));
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching person details:", error);
     throw error;
   }
 };
@@ -229,13 +272,17 @@ const tmdbApi = {
     try {
       const movieDetails = await fetchMovieDetails(id);
       
+      if (!movieDetails) {
+        throw new Error(`Movie details not available for ID: ${id}`);
+      }
 
-      return {
+      // Create Movie object from MovieDetails
+      const movie: Movie = {
         id: movieDetails.id,
         title: movieDetails.title,
         adult: movieDetails.adult,
         backdrop_path: movieDetails.backdrop_path || '',
-        genre_ids: movieDetails.genres.map(genre => genre.id),
+        genre_ids: movieDetails.genres?.map(genre => genre.id) || [],
         original_language: movieDetails.original_language,
         original_title: movieDetails.original_title,
         overview: movieDetails.overview || '',
@@ -246,6 +293,8 @@ const tmdbApi = {
         vote_average: movieDetails.vote_average,
         vote_count: movieDetails.vote_count
       };
+
+      return movie;
     } catch (error) {
       console.error(`Error fetching movie by ID ${id}:`, error);
       throw error;
@@ -254,7 +303,11 @@ const tmdbApi = {
   
   getTrendingMovies: async (): Promise<TrendingMovie[]> => {
     return fetchTrendingMovies();
-  }
+  },
+
+  getPersonDetails: async (personId: number): Promise<PersonDetails> => {
+    return fetchPersonDetails(personId);
+  },
 };
 
 export { tmdbApi };

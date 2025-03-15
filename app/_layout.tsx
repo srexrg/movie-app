@@ -100,6 +100,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }}
             />
+            <Stack.Screen
+              name="movies/person/[id]"
+              options={{
+                animation: 'slide_from_right',
+                presentation: 'card'
+              }}
+            />
           </Stack>
         </View>
       )}

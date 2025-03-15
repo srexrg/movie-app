@@ -12,6 +12,7 @@ import { fetchMovieDetails, tmdbApi } from '@/app/services/tmdb/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_WIDTH * 1.2;
+const DEFAULT_MOVIE_POSTER = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-38-picture-grey-c2ebdbb057f2a7614185931650f8cee23fa137b93812ccb132b9df511df1cfac.svg";
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function MovieDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieVideo | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMovie();
@@ -29,6 +31,7 @@ export default function MovieDetailScreen() {
 
   const loadMovie = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const details = await fetchMovieDetails(Number(id));
       setMovieDetails(details);
@@ -46,7 +49,9 @@ export default function MovieDetailScreen() {
         setSelectedTrailer(trailer);
       }
     } catch (error) {
-      console.error('Error loading movie:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load movie details';
+      console.error('Error loading movie:', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +82,10 @@ export default function MovieDetailScreen() {
   };
 
   const renderCastMember = ({ item }: { item: MovieCredit }) => (
-    <View className="mr-4 items-center w-24">
+    <TouchableOpacity 
+      onPress={() => router.push(`/movies/person/${item.id}`)}
+      className="mr-4 items-center w-24"
+    >
       <View className="w-24 h-24 rounded-full overflow-hidden mb-2">
         {item.profile_path ? (
           <Image
@@ -105,10 +113,10 @@ export default function MovieDetailScreen() {
       >
         {item.character}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
-  if (isLoading || !movie || !movieDetails) {
+  if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-primary">
         <View className="flex-1 items-center justify-center">
@@ -118,6 +126,53 @@ export default function MovieDetailScreen() {
             style={{ fontFamily: 'Poppins_600SemiBold' }}
           >
             Loading movie details...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-primary">
+        <View className="flex-1">
+          <TouchableOpacity
+            className="absolute top-4 left-4 z-10 bg-black/50 p-2 rounded-full"
+            onPress={() => router.back()}
+          >
+            <FontAwesome5 name="arrow-left" size={20} color="white" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center justify-center p-4">
+            <FontAwesome5 name="exclamation-circle" size={48} color="#AB8BFF" />
+            <Text 
+              className="text-white text-xl mt-4 text-center" 
+              style={{ fontFamily: 'Poppins_600SemiBold' }}
+            >
+              {error}
+            </Text>
+            <TouchableOpacity
+              onPress={loadMovie}
+              className="mt-6 bg-accent px-6 py-3 rounded-full"
+            >
+              <Text 
+                className="text-white" 
+                style={{ fontFamily: 'Poppins_600SemiBold' }}
+              >
+                Try Again
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!movie || !movieDetails) {
+    return (
+      <SafeAreaView className="flex-1 bg-primary">
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-white text-xl" style={{ fontFamily: 'Poppins_600SemiBold' }}>
+            Movie not found
           </Text>
         </View>
       </SafeAreaView>
@@ -146,9 +201,12 @@ export default function MovieDetailScreen() {
           {/* Backdrop Image */}
           <View className="w-full" style={{ height: POSTER_HEIGHT }}>
             <Image
-              source={{ uri: movieDetails.backdrop_path || movie.backdrop_path }}
+              source={{ 
+                uri: (movieDetails?.backdrop_path || movie?.backdrop_path) || DEFAULT_MOVIE_POSTER 
+              }}
               className="absolute w-full h-full"
-              resizeMode="cover"
+              resizeMode={(movieDetails?.backdrop_path || movie?.backdrop_path) ? "cover" : "contain"}
+              style={!(movieDetails?.backdrop_path || movie?.backdrop_path) ? { padding: 32 } : undefined}
             />
             <View className="absolute inset-0 bg-gradient-to-b from-transparent to-primary" />
           </View>
@@ -304,14 +362,15 @@ export default function MovieDetailScreen() {
                   >
                     Production
                   </Text>
-                  <View className="flex-row flex-wrap gap-2">
+                  <View className="flex-row flex-wrap">
                     {movieDetails.production_companies.map(company => (
                       <Text 
                         key={company.id} 
                         className="text-light-200 text-base"
                         style={{ fontFamily: 'Poppins_400Regular' }}
                       >
-                        {company.name}{', '}
+                        {company.name}{','}
+                        {/* {index < movieDetails.production_companies.length - 1 ? ', ' : ''} */}
                       </Text>
                     ))}
                   </View>
