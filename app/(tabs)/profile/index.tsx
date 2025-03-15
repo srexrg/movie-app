@@ -11,6 +11,7 @@ type UserPreferences = {
 
 export default function ProfileScreen() {
   const [savedMoviesCount, setSavedMoviesCount] = useState(0);
+  const [userName, setUserName] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>({
     enableNotifications: true,
     darkMode: true,
@@ -21,11 +22,15 @@ export default function ProfileScreen() {
   }, []);
 
   const loadUserData = async () => {
-    const savedMovies = await storageService.getSavedMovies();
-    setSavedMoviesCount(savedMovies.length);
+    const [savedMovies, userPrefs, name] = await Promise.all([
+      storageService.getSavedMovies(),
+      storageService.getUserPreferences(),
+      storageService.getUserName()
+    ]);
     
-    const userPrefs = await storageService.getUserPreferences();
+    setSavedMoviesCount(savedMovies.length);
     setPreferences(prev => ({ ...prev, ...userPrefs }));
+    setUserName(name);
   };
 
   const handleTogglePreference = async (key: keyof UserPreferences) => {
@@ -49,7 +54,7 @@ export default function ProfileScreen() {
               className="text-white text-2xl"
               style={{ fontFamily: 'Poppins_700Bold' }}
             >
-              Movie Enthusiast
+              {userName || 'Movie Enthusiast'}
             </Text>
           </View>
 

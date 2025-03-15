@@ -4,10 +4,11 @@ import { Movie } from '@/app/types/movie';
 const STORAGE_KEYS = {
   SAVED_MOVIES: 'saved_movies',
   USER_PREFERENCES: 'user_preferences',
+  USER_NAME: 'user_name',
 };
 
 const storageService = {
-  // Saved Movies
+
   getSavedMovies: async (): Promise<Movie[]> => {
     try {
       const savedMovies = await AsyncStorage.getItem(STORAGE_KEYS.SAVED_MOVIES);
@@ -50,7 +51,7 @@ const storageService = {
     }
   },
 
-  // User Preferences
+
   getUserPreferences: async () => {
     try {
       const preferences = await AsyncStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
@@ -72,7 +73,27 @@ const storageService = {
       console.error('Error setting user preferences:', error);
       return false;
     }
-  }
+  },
+
+
+  getUserName: async (): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME);
+    } catch (error) {
+      console.error('Error getting user name:', error);
+      return null;
+    }
+  },
+
+  setUserName: async (name: string): Promise<boolean> => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_NAME, name);
+      return true;
+    } catch (error) {
+      console.error('Error setting user name:', error);
+      return false;
+    }
+  },
 };
 
 export { storageService };

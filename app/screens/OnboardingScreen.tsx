@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, TouchableOpacity, Image } from 'react-native';
+import { View, Text, Dimensions, TouchableOpacity, Image, TextInput } from 'react-native';
 import React, { useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import Animated, {
@@ -9,6 +9,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageService } from '@/app/services/storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export const HAS_ONBOARDED = 'has_onboarded';
@@ -87,6 +88,8 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<Animated.FlatList<typeof ONBOARDING_DATA[0]>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [userName, setUserName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -96,7 +99,19 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
   const completeOnboarding = async () => {
     try {
-      await AsyncStorage.setItem(HAS_ONBOARDED, 'true');
+      if (currentIndex === ONBOARDING_DATA.length - 1) {
+        if (!showNameInput) {
+          setShowNameInput(true);
+          return;
+        }
+        if (!userName.trim()) {
+          return; 
+        }
+        await Promise.all([
+          AsyncStorage.setItem(HAS_ONBOARDED, 'true'),
+          storageService.setUserName(userName.trim())
+        ]);
+      }
       onComplete();
     } catch (error) {
       console.error('Error saving onboarding status:', error);
@@ -118,45 +133,77 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   return (
     <View className="flex-1">
       <StatusBar style="light" backgroundColor="#030014" />
-      <Animated.FlatList
-        ref={flatListRef}
-        data={ONBOARDING_DATA}
-        renderItem={({ item, index }) => (
-          <OnboardingItem item={item} index={index} scrollX={scrollX} />
-        )}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={(e) => {
-          const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          setCurrentIndex(newIndex);
-        }}
-      />
-
-      <View className="absolute bottom-20 left-0 right-0 z-20">
-        <View className="flex-row justify-center space-x-2 mb-8">
-          {ONBOARDING_DATA.map((_, index) => (
-            <View
-              key={index}
-              className={`h-2 rounded-full ${
-                index === currentIndex ? 'w-6 bg-accent' : 'w-2 bg-light-300'
-              }`}
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          onPress={handleNext}
-          className="bg-accent mx-8 p-4 rounded-full"
-        >
-          <Text style={{ fontFamily:"Poppins_700Bold"}} className="text-white text-center text-lg">
-            {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
+      {showNameInput ? (
+        <View className="flex-1 bg-primary justify-center px-8">
+          <Text 
+            style={{fontFamily:'Poppins_800ExtraBold'}} 
+            className="text-3xl text-white mb-6 text-center"
+          >
+            What's your name?
           </Text>
-        </TouchableOpacity>
-      </View>
+          <TextInput
+            className="bg-secondary text-white p-4 rounded-xl mb-6"
+            style={{fontFamily: 'Poppins_600SemiBold'}}
+            placeholder="Enter your name"
+            placeholderTextColor="#9CA4AB"
+            value={userName}
+            onChangeText={setUserName}
+            autoFocus
+          />
+          <TouchableOpacity
+            onPress={completeOnboarding}
+            className="bg-accent p-4 rounded-full"
+          >
+            <Text 
+              style={{ fontFamily:"Poppins_700Bold"}} 
+              className="text-white text-center text-lg"
+            >
+              Get Started
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <Animated.FlatList
+            ref={flatListRef}
+            data={ONBOARDING_DATA}
+            renderItem={({ item, index }) => (
+              <OnboardingItem item={item} index={index} scrollX={scrollX} />
+            )}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={(e) => {
+              const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setCurrentIndex(newIndex);
+            }}
+          />
+          <View className="absolute bottom-20 left-0 right-0 z-20">
+            <View className="flex-row justify-center space-x-2 mb-8">
+              {ONBOARDING_DATA.map((_, index) => (
+                <View
+                  key={index}
+                  className={`h-2 rounded-full ${
+                    index === currentIndex ? 'w-6 bg-accent' : 'w-2 bg-light-300'
+                  }`}
+                />
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={handleNext}
+              className="bg-accent mx-8 p-4 rounded-full"
+            >
+              <Text style={{ fontFamily:"Poppins_700Bold"}} className="text-white text-center text-lg">
+                {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 }
