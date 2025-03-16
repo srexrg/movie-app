@@ -1,6 +1,7 @@
 import { View, Text, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { storageService } from '@/app/services/storage';
 
@@ -18,9 +19,11 @@ export default function ProfileScreen() {
     darkMode: true,
   });
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [])
+  );
 
   const loadUserData = async () => {
     const [savedMovies, savedSeries, userPrefs, name] = await Promise.all([

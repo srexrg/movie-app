@@ -402,7 +402,7 @@ export default function SeriesDetailScreen() {
                     {seriesDetails.seasons
                       .filter(season => season.season_number > 0) // Filter out special seasons
                       .map(season => (
-                        <View key={season.id} className="mr-4 w-32">
+                        <View key={season.id} className="mr-8 w-32">
                           <Image
                             source={{ 
                               uri: season.poster_path || DEFAULT_POSTER 
