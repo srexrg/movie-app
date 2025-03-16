@@ -96,9 +96,115 @@ export interface MovieDetails {
   };
 }
 
+// TV Series types
+export interface Series {
+  id: number;
+  name: string;
+  backdrop_path: string;
+  genre_ids: number[];
+  original_language: string;
+  original_name: string;
+  overview: string;
+  popularity: number;
+  poster_path: string;
+  first_air_date: string;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface SeriesDetails {
+  adult: boolean;
+  backdrop_path: string | null;
+  created_by: {
+    id: number;
+    name: string;
+    profile_path: string | null;
+  }[];
+  episode_run_time: number[];
+  first_air_date: string;
+  genres: {
+    id: number;
+    name: string;
+  }[];
+  homepage: string | null;
+  id: number;
+  in_production: boolean;
+  languages: string[];
+  last_air_date: string;
+  last_episode_to_air: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string;
+    episode_number: number;
+    season_number: number;
+  } | null;
+  name: string;
+  networks: {
+    id: number;
+    name: string;
+    logo_path: string | null;
+  }[];
+  number_of_episodes: number;
+  number_of_seasons: number;
+  origin_country: string[];
+  original_language: string;
+  original_name: string;
+  overview: string | null;
+  popularity: number;
+  poster_path: string | null;
+  production_companies: {
+    id: number;
+    logo_path: string | null;
+    name: string;
+    origin_country: string;
+  }[];
+  seasons: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string | null;
+    episode_count: number;
+    poster_path: string | null;
+    season_number: number;
+  }[];
+  status: string;
+  tagline: string | null;
+  type: string;
+  vote_average: number;
+  vote_count: number;
+  videos?: {
+    results: MovieVideo[];
+  };
+  credits?: {
+    cast: MovieCredit[];
+    crew: MovieCredit[];
+  };
+}
+
+export interface TrendingSeries {
+  searchTerm: string;
+  series_id: number;
+  name: string;
+  count: number;
+  poster_url: string;
+}
+
+export interface SeriesResponse {
+  page: number;
+  results: Series[];
+  total_pages: number;
+  total_results: number;
+}
+
 export interface TrendingCardProps {
   movie: TrendingMovie;
   index: number;
+}
+
+export interface SeriesCardProps {
+  series: Series;
+  index?: number;
 }
 
 export interface MovieResponse {
@@ -121,11 +227,14 @@ export interface PersonDetails {
   combined_credits: {
     cast: {
       id: number;
-      title: string;
+      title?: string; // Movie title
+      name?: string;  // TV series name
       poster_path: string | null;
-      release_date: string;
+      release_date?: string; // Movie release date
+      first_air_date?: string; // TV series first air date
       character: string;
       vote_average: number;
+      media_type: string; // 'movie' or 'tv'
     }[];
   };
 }

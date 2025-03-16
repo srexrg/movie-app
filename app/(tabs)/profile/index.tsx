@@ -11,6 +11,7 @@ type UserPreferences = {
 
 export default function ProfileScreen() {
   const [savedMoviesCount, setSavedMoviesCount] = useState(0);
+  const [savedSeriesCount, setSavedSeriesCount] = useState(0);
   const [userName, setUserName] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>({
     enableNotifications: true,
@@ -22,13 +23,15 @@ export default function ProfileScreen() {
   }, []);
 
   const loadUserData = async () => {
-    const [savedMovies, userPrefs, name] = await Promise.all([
+    const [savedMovies, savedSeries, userPrefs, name] = await Promise.all([
       storageService.getSavedMovies(),
+      storageService.getSavedSeries(),
       storageService.getUserPreferences(),
       storageService.getUserName()
     ]);
     
     setSavedMoviesCount(savedMovies.length);
+    setSavedSeriesCount(savedSeries.length);
     setPreferences(prev => ({ ...prev, ...userPrefs }));
     setUserName(name);
   };
@@ -65,7 +68,7 @@ export default function ProfileScreen() {
             >
               Statistics
             </Text>
-            <View className="flex-row justify-between">
+            <View className="flex-row justify-around">
               <View className="items-center">
                 <Text 
                   className="text-accent text-2xl"
@@ -78,6 +81,34 @@ export default function ProfileScreen() {
                   style={{ fontFamily: 'Poppins_600SemiBold' }}
                 >
                   Saved Movies
+                </Text>
+              </View>
+              <View className="items-center">
+                <Text 
+                  className="text-accent text-2xl"
+                  style={{ fontFamily: 'Poppins_700Bold' }}
+                >
+                  {savedSeriesCount}
+                </Text>
+                <Text 
+                  className="text-light-200"
+                  style={{ fontFamily: 'Poppins_600SemiBold' }}
+                >
+                  Saved Series
+                </Text>
+              </View>
+              <View className="items-center">
+                <Text 
+                  className="text-accent text-2xl"
+                  style={{ fontFamily: 'Poppins_700Bold' }}
+                >
+                  {savedMoviesCount + savedSeriesCount}
+                </Text>
+                <Text 
+                  className="text-light-200"
+                  style={{ fontFamily: 'Poppins_600SemiBold' }}
+                >
+                  Total Saved
                 </Text>
               </View>
             </View>

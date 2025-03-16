@@ -40,12 +40,18 @@ export default function PersonDetailsScreen() {
     });
   };
 
-  const renderMovie = ({ item }: { item: PersonDetails['combined_credits']['cast'][0] }) => {
+  const renderContent = ({ item }: { item: PersonDetails['combined_credits']['cast'][0] }) => {
     const hasValidPosterPath = item.poster_path && item.poster_path.length > 0;
+    const isMovie = item.media_type === 'movie';
+    const title = isMovie ? item.title : item.name;
+    const date = isMovie ? item.release_date : item.first_air_date;
+    
+    // Determine the navigation route based on media type
+    const navigateTo = isMovie ? `/movies/${item.id}` : `/series/${item.id}`;
     
     return (
       <TouchableOpacity 
-        onPress={() => router.push(`/movies/${item.id}`)}
+        onPress={() => router.push(navigateTo as any)}
         className="mr-4 w-32"
       >
         <View className="relative">
@@ -57,7 +63,7 @@ export default function PersonDetailsScreen() {
             />
           ) : (
             <View className="w-32 h-48 rounded-xl bg-secondary items-center justify-center">
-              <FontAwesome5 name="film" size={24} color="#9CA4AB" />
+              <FontAwesome5 name={isMovie ? "film" : "tv"} size={24} color="#9CA4AB" />
               <Text className="text-light-200 text-xs text-center mt-2 px-2" style={{ fontFamily: 'Poppins_400Regular' }}>
                 No poster
               </Text>
@@ -74,7 +80,7 @@ export default function PersonDetailsScreen() {
           className="text-white mt-2 text-sm"
           style={{ fontFamily: 'Poppins_600SemiBold' }}
         >
-          {item.title}
+          {title}
         </Text>
         <Text 
           className="text-light-200 text-xs"
@@ -220,12 +226,12 @@ export default function PersonDetailsScreen() {
               </Text>
               <FlatList
                 data={person.combined_credits.cast
-                  .filter(movie => movie.title && movie.title.trim().length > 0)
+                  .filter(item => (item.title || item.name) && item.character)
                   .sort((a, b) => b.vote_average - a.vote_average)
                   .slice(0, 10)
                 }
                 keyExtractor={(item) => `${item.id}-${item.character}`}
-                renderItem={renderMovie}
+                renderItem={renderContent}
                 horizontal
                 showsHorizontalScrollIndicator={false}
               />

@@ -1,47 +1,59 @@
-import { View, Text, TextInput, FlatList, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, Dimensions, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Movie } from '@/app/types/movie';
-import { fetchMovies, tmdbApi } from '@/app/services/tmdb/api';
+import { Movie, Series } from '@/app/types/movie';
+import { fetchMovies, fetchSeries, tmdbApi } from '@/app/services/tmdb/api';
 import MovieCard from '@/app/components/MovieCard';
+import SeriesCard from '@/app/components/SeriesCard';
 import useDebounce from '@/app/hooks/useDebounce';
 
 const DEBOUNCE_DELAY = 500;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SPACING = 8;
-const NUM_COLUMNS = 3;
+const SPACING = 16;
+const NUM_COLUMNS = 2;
 const ITEM_WIDTH = (SCREEN_WIDTH - 32 - (SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
+
+type ContentType = 'movies' | 'series';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<Movie[]>([]);
+  const [movieResults, setMovieResults] = useState<Movie[]>([]);
+  const [seriesResults, setSeriesResults] = useState<Series[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
+  const [popularSeries, setPopularSeries] = useState<Series[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState(true);
+  const [activeTab, setActiveTab] = useState<ContentType>('movies');
   
   const debouncedQuery = useDebounce(searchQuery, DEBOUNCE_DELAY);
 
   useEffect(() => {
-    loadPopularMovies();
+    loadPopularContent();
   }, []);
 
   useEffect(() => {
     if (debouncedQuery.trim()) {
       handleSearch();
     } else {
-      setResults([]);
+      setMovieResults([]);
+      setSeriesResults([]);
       setHasSearched(false);
     }
   }, [debouncedQuery]);
 
-  const loadPopularMovies = async () => {
+  const loadPopularContent = async () => {
     try {
-      const { results } = await tmdbApi.getPopularMovies();
-      setPopularMovies(results);
+      const [movieData, seriesData] = await Promise.all([
+        tmdbApi.getPopularMovies(),
+        tmdbApi.getPopularSeries()
+      ]);
+      
+      setPopularMovies(movieData.results);
+      setPopularSeries(seriesData.results);
     } catch (error) {
-      console.error('Error loading popular movies:', error);
+      console.error('Error loading popular content:', error);
     } finally {
       setIsLoadingPopular(false);
     }
@@ -52,15 +64,34 @@ export default function SearchScreen() {
     setHasSearched(true);
     
     try {
-      const movies = await fetchMovies({ query: debouncedQuery });
-      setResults(movies);
+      const [movies, series] = await Promise.all([
+        fetchMovies({ query: debouncedQuery }),
+        fetchSeries({ query: debouncedQuery })
+      ]);
+      
+      setMovieResults(movies);
+      setSeriesResults(series);
     } catch (error) {
       console.error('Search error:', error);
-      setResults([]);
+      setMovieResults([]);
+      setSeriesResults([]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const hasNoResults = movieResults.length === 0 && seriesResults.length === 0 && hasSearched;
+  const currentResults = activeTab === 'movies' ? movieResults : seriesResults;
+  const currentPopular = activeTab === 'movies' ? popularMovies : popularSeries;
+
+  // Helper functions to properly type the renderItem function
+  const renderMovieItem = ({ item }: { item: Movie }) => (
+    <MovieCard movie={item} width={ITEM_WIDTH} />
+  );
+  
+  const renderSeriesItem = ({ item }: { item: Series }) => (
+    <SeriesCard series={item} width={ITEM_WIDTH} />
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -71,7 +102,7 @@ export default function SearchScreen() {
             <TextInput
               className="flex-1 ml-2 text-white"
               style={{ fontFamily: 'Poppins_600SemiBold' }}
-              placeholder="Search movies..."
+              placeholder="Search movies & TV series..."
               placeholderTextColor="#9CA4AB"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -80,24 +111,47 @@ export default function SearchScreen() {
           </View>
         </View>
 
+        {/* Tab Navigation */}
+        {(hasSearched || !isLoadingPopular) && (
+          <View className="flex-row mb-6 bg-secondary rounded-full">
+            <TouchableOpacity
+              onPress={() => setActiveTab('movies')}
+              className={`flex-1 py-3 px-4 rounded-full ${
+                activeTab === 'movies' ? 'bg-accent' : ''
+              }`}
+            >
+              <Text 
+                className={`text-center ${
+                  activeTab === 'movies' ? 'text-white' : 'text-light-200'
+                }`}
+                style={{ fontFamily: 'Poppins_600SemiBold' }}
+              >
+                Movies
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('series')}
+              className={`flex-1 py-3 px-4 rounded-full ${
+                activeTab === 'series' ? 'bg-accent' : ''
+              }`}
+            >
+              <Text 
+                className={`text-center ${
+                  activeTab === 'series' ? 'text-white' : 'text-light-200'
+                }`}
+                style={{ fontFamily: 'Poppins_600SemiBold' }}
+              >
+                TV Series
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#AB8BFF" />
           </View>
-        ) : results.length > 0 ? (
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={NUM_COLUMNS}
-            columnWrapperStyle={{
-              gap: SPACING,
-              marginBottom: SPACING
-            }}
-            renderItem={({ item }) => (
-              <MovieCard movie={item} width={ITEM_WIDTH} />
-            )}
-          />
-        ) : hasSearched ? (
+        ) : hasNoResults ? (
           <View className="flex-1 items-center justify-center">
             <Text 
               className="text-white text-xl text-center mb-2"
@@ -112,6 +166,32 @@ export default function SearchScreen() {
               Try searching with different keywords
             </Text>
           </View>
+        ) : hasSearched ? (
+          activeTab === 'movies' ? (
+            <FlatList
+              key={`movies-search-${NUM_COLUMNS}-columns`}
+              data={movieResults}
+              keyExtractor={(item) => `movie-${item.id.toString()}`}
+              numColumns={NUM_COLUMNS}
+              columnWrapperStyle={{
+                gap: SPACING,
+                marginBottom: SPACING
+              }}
+              renderItem={renderMovieItem}
+            />
+          ) : (
+            <FlatList
+              key={`series-search-${NUM_COLUMNS}-columns`}
+              data={seriesResults}
+              keyExtractor={(item) => `series-${item.id.toString()}`}
+              numColumns={NUM_COLUMNS}
+              columnWrapperStyle={{
+                gap: SPACING,
+                marginBottom: SPACING
+              }}
+              renderItem={renderSeriesItem}
+            />
+          )
         ) : isLoadingPopular ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#AB8BFF" />
@@ -122,20 +202,33 @@ export default function SearchScreen() {
               className="text-white text-xl mb-4"
               style={{ fontFamily: 'Poppins_700Bold' }}
             >
-              Popular Movies
+              Popular {activeTab === 'movies' ? 'Movies' : 'TV Series'}
             </Text>
-            <FlatList
-              data={popularMovies}
-              keyExtractor={(item) => item.id.toString()}
-              numColumns={NUM_COLUMNS}
-              columnWrapperStyle={{
-                gap: SPACING,
-                marginBottom: SPACING
-              }}
-              renderItem={({ item }) => (
-                <MovieCard movie={item} width={ITEM_WIDTH} />
-              )}
-            />
+            {activeTab === 'movies' ? (
+              <FlatList
+                key={`popular-movies-${NUM_COLUMNS}-columns`}
+                data={popularMovies}
+                keyExtractor={(item) => `popular-movie-${item.id.toString()}`}
+                numColumns={NUM_COLUMNS}
+                columnWrapperStyle={{
+                  gap: SPACING,
+                  marginBottom: SPACING
+                }}
+                renderItem={renderMovieItem}
+              />
+            ) : (
+              <FlatList
+                key={`popular-series-${NUM_COLUMNS}-columns`}
+                data={popularSeries}
+                keyExtractor={(item) => `popular-series-${item.id.toString()}`}
+                numColumns={NUM_COLUMNS}
+                columnWrapperStyle={{
+                  gap: SPACING,
+                  marginBottom: SPACING
+                }}
+                renderItem={renderSeriesItem}
+              />
+            )}
           </>
         )}
       </View>

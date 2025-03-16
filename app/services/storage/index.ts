@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Movie } from '@/app/types/movie';
+import { Movie, Series } from '@/app/types/movie';
 
 const STORAGE_KEYS = {
   SAVED_MOVIES: 'saved_movies',
+  SAVED_SERIES: 'saved_series',
   USER_PREFERENCES: 'user_preferences',
   USER_NAME: 'user_name',
 };
 
 const storageService = {
-
+  // Movie-related storage methods
   getSavedMovies: async (): Promise<Movie[]> => {
     try {
       const savedMovies = await AsyncStorage.getItem(STORAGE_KEYS.SAVED_MOVIES);
@@ -51,7 +52,50 @@ const storageService = {
     }
   },
 
+  // Series-related storage methods
+  getSavedSeries: async (): Promise<Series[]> => {
+    try {
+      const savedSeries = await AsyncStorage.getItem(STORAGE_KEYS.SAVED_SERIES);
+      return savedSeries ? JSON.parse(savedSeries) : [];
+    } catch (error) {
+      console.error('Error getting saved series:', error);
+      return [];
+    }
+  },
 
+  saveSeries: async (series: Series): Promise<boolean> => {
+    try {
+      const savedSeries = await storageService.getSavedSeries();
+      if (!savedSeries.find(s => s.id === series.id)) {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.SAVED_SERIES, 
+          JSON.stringify([...savedSeries, series])
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error saving series:', error);
+      return false;
+    }
+  },
+
+  removeSeries: async (seriesId: number): Promise<boolean> => {
+    try {
+      const savedSeries = await storageService.getSavedSeries();
+      const updatedSeries = savedSeries.filter(series => series.id !== seriesId);
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.SAVED_SERIES,
+        JSON.stringify(updatedSeries)
+      );
+      return true;
+    } catch (error) {
+      console.error('Error removing series:', error);
+      return false;
+    }
+  },
+
+  // User preference methods
   getUserPreferences: async () => {
     try {
       const preferences = await AsyncStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
@@ -75,7 +119,7 @@ const storageService = {
     }
   },
 
-
+  // User name methods
   getUserName: async (): Promise<string | null> => {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME);
